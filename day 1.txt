@@ -1,0 +1,664 @@
+# **Problem Statement**
+
+Zomato is an Indian restaurant aggregator and food delivery start-up founded by Deepinder Goyal and Pankaj Chaddah in 2008. Zomato provides information, menus and user-reviews of restaurants, and also has food delivery options from partner restaurants in select cities.
+
+India is quite famous for its diverse multi cuisine available in a large number of restaurants and hotel resorts, which is reminiscent of unity in diversity. Restaurant business in India is always evolving. More Indians are warming up to the idea of eating restaurant food whether by dining outside or getting food delivered. The growing number of restaurants in every state of India has been a motivation to inspect the data to get some insights, interesting facts and figures about the Indian food industry in each city. So, this project focuses on analysing the Zomato restaurant data for each city in India.
+
+The Project focuses on Customers and Company, you have  to analyze the sentiments of the reviews given by the customer in the data and made some useful conclusion in the form of Visualizations. Also, cluster the zomato restaurants into different segments. The data is vizualized as it becomes easy to analyse data at instant. The Analysis also solve some of the business cases that can directly help the customers finding the Best restaurant in their locality and for the company to grow up and work on the fields they are currently lagging in.
+
+This could help in clustering the restaurants into segments. Also the data has valuable information around cuisine and costing which can be used in cost vs. benefit analysis
+
+Data could be used for sentiment analysis. Also the metadata of reviewers can be used for identifying the critics in the industry. 
+
+# **Attribute Information**
+
+## **Zomato Restaurant names and Metadata**
+Use this dataset for clustering part
+
+1. Name : Name of Restaurants
+
+2. Links : URL Links of Restaurants
+
+3. Cost : Per person estimated Cost of dining
+
+4. Collection : Tagging of Restaurants w.r.t. Zomato categories
+
+5. Cuisines : Cuisines served by Restaurants
+
+6. Timings : Restaurant Timings
+
+## **Zomato Restaurant reviews**
+Merge this dataset with Names and Matadata and then use for sentiment analysis part
+
+1. Restaurant : Name of the Restaurant
+
+2. Reviewer : Name of the Reviewer
+
+3. Review : Review Text
+
+4. Rating : Rating Provided by Reviewer
+
+5. MetaData : Reviewer Metadata - No. of Reviews and followers
+
+6. Time: Date and Time of Review
+
+7. Pictures : No. of pictures posted with review
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+data1 = pd.read_csv('/content/drive/MyDrive/Data/Zomato Restaurant names and Metadata.csv')
+
+data2 = pd.read_csv('/content/drive/MyDrive/Data/Zomato Restaurant reviews.csv')
+
+data2 = pd.read_csv('/content/drive/MyDrive/Data/Zomato Restaurant reviews.csv')
+df_name=data1.copy()
+
+
+df_review=data2.copy()
+
+df_name.head()
+
+df_name.shape
+
+df_name.describe()
+
+df_name.info()
+
+As we can see Collections and timings column contain null values, and null values more than 50% then column will be dropped
+
+# Null Value treatment
+
+((df_name['Collections'].isnull().sum())/(len(df_name['Collections']))*100)
+
+#calculatinh null value percent
+na_percent={}
+for col in list(df_name.columns):
+  x= ((df_name[col].isnull().sum())/(len(df_name[col]))*100)
+  na_percent[col] = x
+print(na_percent)
+
+# Dropping the 'Collections' feature
+df_name.drop(columns = 'Collections',axis =1,inplace = True)
+
+#fill null values for timing col
+
+df_name.fillna(value = 0, axis = 0,inplace = True)
+
+#Check for Datatypes for each column
+
+df_name.info()
+
+df_name.head()
+
+#check for Name
+df_name['Name'][:5]
+
+type(df_name['Name'])
+
+df_name['Name'] = df_name['Name'].apply(lambda x:str(x))
+
+df_name['Name'][:5]
+
+#check for Links
+df_name['Links'][:5]
+
+type(df_name['Links'][0])
+
+# 'Cost' feature
+type(df_name['Cost'][0])
+
+df_name['Cost'][0:5]
+
+# 'Cost' feature
+# Replacing ',' 
+df_name['Cost'] = df_name['Cost'].str.replace(',','')
+
+# Converting 'cost' feature to integer datatype
+df_name['Cost'] = df_name['Cost'].apply(lambda x:int(x))
+
+#check for Cuisines
+print(df_name['Cuisines'][:5])
+print(type(df_name['Cuisines'][0]))
+
+
+def get_cuisines(x):
+  return x.split(', ')
+
+#check for Cuisines
+df_name['Cuisines'] = df_name['Cuisines'].apply(lambda x : get_cuisines(x))
+
+
+df_name['Cuisines'].nunique
+
+type(df_name['Cuisines'][0])
+
+#check for Timings
+print(df_name['Timings'][:5])
+print(type(df_name['Timings'][0]))
+
+#Top 10 Cuisines
+
+# Top 10 Cuisines
+cluisine_list = {}
+for names in df_name['Cuisines']:
+    for name in names:
+      if (name in cluisine_list):
+        cluisine_list[name]+=1
+      else:
+         cluisine_list[name]=1
+# Create a cuis dataframe
+cuis_df = pd.DataFrame(cluisine_list.values(),index = cluisine_list.keys(), columns = {'Cuisine count in Restaurants'}).reset_index()
+
+# Sort the dataframe in descending order
+cuis_df.sort_values(by = 'Cuisine count in Restaurants',ascending = False,inplace = True)
+
+
+# Visualization of Cuisines Count
+plt.figure(figsize = (15, 8))
+sns.set(font_scale = 2)
+sns.barplot(data = cuis_df,x = cuis_df['index'],y = cuis_df['Cuisine count in Restaurants'])
+plt.title('Cuisines Count',fontweight='bold')
+plt.xticks(rotation = 90,fontsize = 18)
+plt.yticks(fontsize = 18)
+plt.show()
+
+from wordcloud import WordCloud
+from nltk.stem import PorterStemmer
+
+# Most nominated words from 'Cuisine' feature
+words_list = cluisine_list.keys()
+strr = ' '
+for i in words_list:
+    strr=strr+i+' '
+    
+wordcloud = WordCloud(background_color='white',min_font_size = 1,colormap = 'Paired').generate(strr) 
+wordcloud.to_image()
+
+#Distribuition of cost column
+
+plt.figure(figsize=(10,5))
+fig = plt.figure(figsize=(9, 6))
+ax = fig.gca()
+continous = df_name['Cost']
+sns.distplot(df_name['Cost'], kde=True,ax=ax, color = 'g')
+ax.axvline(continous.mean(), color='magenta', linestyle='dashed', linewidth=2)
+ax.axvline(continous.median(), color='cyan', linestyle='dashed', linewidth=2)    
+ax.set_title('Cost')
+plt.show()
+
+
+df_name.head()
+
+avg_cost = pd.DataFrame(df_name.groupby(df_name['Name']).agg({'Cost':'mean'})).reset_index()
+avg_cost.sort_values(by = 'Cost',ascending = False,inplace= True)
+avg_cost.head()
+
+# Visualization of Restaurant names and their respective cost
+plt.figure(figsize = (20, 10))
+sns.set(font_scale = 2)
+sns.barplot(data = avg_cost,x = avg_cost['Name'],y = avg_cost['Cost'])
+plt.title('Cost of Restaurants',fontweight='bold')
+plt.xticks(rotation = 90,fontsize = 14)
+plt.yticks(fontsize = 18)
+plt.show()
+
+# Tokenizer
+from keras.preprocessing.text import Tokenizer
+
+tokenizer = Tokenizer(num_words="MAX_NB_WORDS")
+tokenizer.fit_on_texts(df_name[['Cuisines','Links','Timings']])
+
+import re, string, unicodedata
+import nltk
+import inflect
+from nltk import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import LancasterStemmer, WordNetLemmatizer
+
+
+
+df_name.head()
+
+df_name['Cuisines']= df_name['Cuisines'].astype(str)
+
+# Functions
+def remove_non_ascii(words):
+    """Remove non-ASCII characters from list of tokenized words"""
+    new_words = []
+    for word in words:
+      word = str(word)
+      new_word = unicodedata.normalize('NFKD', word).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+      new_words.append(new_word)
+    return new_words
+
+def to_lowercase(words):
+    """Convert all characters to lowercase from list of tokenized words"""
+    new_words = []
+    for word in words:
+        new_word = word.lower()
+        new_words.append(new_word)
+    return new_words
+
+def remove_punctuation(words):
+    """Remove punctuation from list of tokenized words"""
+    new_words = []
+    for word in words:
+        new_word = re.sub(r'[^\w\s]', '', word)
+        if new_word != '':
+            new_words.append(new_word)
+    return new_words
+
+def replace_numbers(words):
+    """Replace all interger occurrences in list of tokenized words with textual representation"""
+    p = inflect.engine()
+    new_words = []
+    for word in words:
+        if word.isdigit():
+            new_word = p.number_to_words(word)
+            new_words.append(new_word)
+        else:
+            new_words.append(word)
+    return new_words
+
+def stem_words(words):
+    """Stem words in list of tokenized words"""
+    stemmer = LancasterStemmer()
+    stems = []
+    for word in words:
+        stem = stemmer.stem(word)
+        stems.append(stem)
+    return stems
+
+def lemmatize_verbs(words):
+    """Lemmatize verbs in list of tokenized words"""
+    lemmatizer = WordNetLemmatizer()
+    lemmas = []
+    for word in words:
+        lemma = lemmatizer.lemmatize(word, pos='v')
+        lemmas.append(lemma)
+    return lemmas
+
+def normalize(words):
+    words = remove_non_ascii(words)
+    words = to_lowercase(words)
+    words = remove_punctuation(words)
+    words = replace_numbers(words)
+    return words
+
+# Applying functions
+col_lsts = ['Links','Cuisines','Timings']
+for col_lst in col_lsts:
+  df_name[col_lst] = normalize(df_name[col_lst])
+
+df_name.head()
+
+# Preprocessing the dataset for Clustering models
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples, silhouette_score
+
+# Tfidf vectorizer
+vectorizer = TfidfVectorizer(stop_words= 'english')
+X = vectorizer.fit_transform(df_name['Cuisines'])
+
+X.shape
+
+# Type of X object
+type(X)
+
+# Converting 'X' object to array
+X = X.toarray()
+
+type(X)
+
+# Elbow method to find appropriate 'K' value
+
+from yellowbrick.cluster import KElbowVisualizer
+
+# Function to find appropriate 'K' value
+def KElbowvisualizer(metric):
+  model = KMeans(max_iter=300,random_state=0)
+  plt.figure(figsize=(10,5))
+  sns.set(font_scale = 1)
+  visualizer = KElbowVisualizer(model, k=(2,20),metric= metric, timings= False, locate_elbow= True)
+  # # Fit the data to the visualize
+  visualizer.fit(X)  
+  visualizer.poof()
+
+# KElbowvisualizer with metric as 'calinski_harabasz'
+KElbowvisualizer('calinski_harabasz')
+
+# KElbowvisualizer with metric as 'silhouette'
+KElbowvisualizer('silhouette')
+
+# KElbowvisualizer with metric as 'distortion
+KElbowvisualizer('distortion')
+
+##### From Elbow method, we got  k=12 as optimum value for cluster
+
+## Calculate Silhoutte scores to find appropriate 'K' value
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples, silhouette_score
+
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+
+range_n_clusters = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+sillhouette_cluster_values={}
+
+for n_clusters in range_n_clusters:
+    # Create a subplot with 1 row and 2 columns
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.set_size_inches(18, 7)
+
+    # The 1st subplot is the silhouette plot
+    # The silhouette coefficient can range from -1, 1 but in this example all
+    # lie within [-0.1, 1]
+    ax1.set_xlim([-0.1, 1])
+    # The (n_clusters+1)*10 is for inserting blank space between silhouette
+    # plots of individual clusters, to demarcate them clearly.
+    ax1.set_ylim([0, len(X) + (n_clusters + 1) * 10])
+
+    # Initialize the clusterer with n_clusters value and a random generator
+    # seed of 10 for reproducibility.
+    clusterer = KMeans(n_clusters=n_clusters, random_state=10)
+    cluster_labels = clusterer.fit_predict(X)
+
+    # The silhouette_score gives the average value for all the samples.
+    # This gives a perspective into the density and separation of the formed
+    # clusters
+    silhouette_avg = silhouette_score(X, cluster_labels)
+    print("For n_clusters =", n_clusters,
+          "The average silhouette_score is :", silhouette_avg)
+
+    # Compute the silhouette scores for each sample
+    sample_silhouette_values = silhouette_samples(X, cluster_labels)
+
+    sillhouette_cluster_values[n_clusters] = silhouette_avg
+
+    y_lower = 10
+    for i in range(n_clusters):
+        # Aggregate the silhouette scores for samples belonging to
+        # cluster i, and sort them
+        ith_cluster_silhouette_values = \
+            sample_silhouette_values[cluster_labels == i]
+
+        ith_cluster_silhouette_values.sort()
+
+        size_cluster_i = ith_cluster_silhouette_values.shape[0]
+        y_upper = y_lower + size_cluster_i
+
+        color = cm.nipy_spectral(float(i) / n_clusters)
+        ax1.fill_betweenx(np.arange(y_lower, y_upper),
+                          0, ith_cluster_silhouette_values,
+                          facecolor=color, edgecolor=color, alpha=0.7)
+
+        # Label the silhouette plots with their cluster numbers at the middle
+        ax1.text(-0.05, y_lower + 0.5 * size_cluster_i, str(i))
+
+        # Compute the new y_lower for next plot
+        y_lower = y_upper + 10  # 10 for the 0 samples
+
+    ax1.set_title("The silhouette plot for the various clusters.")
+    ax1.set_xlabel("The silhouette coefficient values")
+    ax1.set_ylabel("Cluster label")
+
+    # The vertical line for average silhouette score of all the values
+    ax1.axvline(x=silhouette_avg, color="red", linestyle="--")
+
+    ax1.set_yticks([])  # Clear the yaxis labels / ticks
+    ax1.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
+
+    # 2nd Plot showing the actual clusters formed
+    colors = cm.nipy_spectral(cluster_labels.astype(float) / n_clusters)
+    ax2.scatter(X[:, 0], X[:, 1], marker='.', s=30, lw=0, alpha=0.7,
+                c=colors, edgecolor='k')
+
+    # Labeling the clusters
+    centers = clusterer.cluster_centers_
+    # Draw white circles at cluster centers
+    ax2.scatter(centers[:, 0], centers[:, 1], marker='o',
+                c="white", alpha=1, s=200, edgecolor='k')
+
+    for i, c in enumerate(centers):
+        ax2.scatter(c[0], c[1], marker='$%d$' % i, alpha=1,
+                    s=50, edgecolor='k')
+
+    ax2.set_title("The visualization of the clustered data.")
+    ax2.set_xlabel("Feature space for the 1st feature")
+    ax2.set_ylabel("Feature space for the 2nd feature")
+    plt.suptitle(("Silhouette analysis for KMeans clustering on sample data "
+                  "with n_clusters = %d" % n_clusters),
+                 fontsize=14, fontweight='bold')
+
+plt.show()
+
+silhouette_avg
+
+sillhouette_cluster_values
+
+x = list(sillhouette_cluster_values.keys())
+y = list(sillhouette_cluster_values.values())
+plt.figure(figsize=(10,5))
+plt.plot(x, y, color='green', marker='o', linestyle='dashed', linewidth=2, markersize=12)
+plt.xlabel("K - values")
+plt.ylabel("Sillhouette scores")
+
+##From the above graph we can take k = 15 as optimum value of silhouette score, as compared to Elbow method also we found k=15 as best value.
+
+# looks like we can go with 14 clusters.
+# Creating an object for K Means clustering
+kmeans= KMeans(n_clusters=15, init= 'k-means++',max_iter=300, n_init=1,random_state = 0)
+
+# MOdel fit
+kmeans.fit(X)
+
+#predict the labels of clusters.
+labels = kmeans.fit_predict(X)
+
+# Clusters center
+clusters_center = kmeans.cluster_centers_
+
+[df_name['Cuisines'][15]]
+
+# Testin
+
+X_new= vectorizer.transform([df_name['Cuisines'][15]])
+
+y_pred_new= kmeans.predict(X_new)[0]
+
+y_pred_new
+
+# Model Validation
+# silhouette score of my clusters
+print("Silhouette Coefficient: %0.3f"%silhouette_score(X, kmeans.labels_))
+
+# Creating new feature to store labels
+df_name['Kmeans_labels'] = kmeans.labels_
+
+# Creating a DataFrame for KMeans Labels visualization
+Kmeans_labels_count = pd.DataFrame(df_name.groupby(['Kmeans_labels'])['Cuisines'].count()).reset_index()
+
+Kmeans_labels_count.head()
+
+df_name.head()
+
+
+
+def labelsnobs(dataframe,x_value,y_value,palette_type,title,y_label):
+  plt.figure(figsize = (20, 8))
+  sns.set(font_scale = 2)
+  sns.barplot(data = dataframe,x = x_value,y = y_value,palette=palette_type)
+  plt.title(title,fontweight='bold')
+  plt.ylabel(y_label)
+  plt.xticks(rotation = 90,fontsize = 14)
+  plt.yticks(fontsize = 18)
+  plt.show()
+
+# Visualization of Labels with n number of observations
+labelsnobs(Kmeans_labels_count,Kmeans_labels_count['Kmeans_labels'],Kmeans_labels_count['Cuisines'],['#581845','#900C3F','C70039','#FF5733'],
+           'labels with n number of observation', 'Observations')
+
+# Getting terms
+terms = vectorizer.get_feature_names()
+
+# Top terms(words) in  per cluster set
+print('\033[1m' + 'Top terms in each cluster:' + '\033[0m')
+cuisines_list = []
+order_centroids = kmeans.cluster_centers_.argsort()[:, ::-1]
+for i in range(15):
+  num = str(i)
+  # print('\033[1m' + 'Cluster:' + '\033[0m',i, end='')
+  print('\033[1m' + 'Cluster:' + num + '\033[0m', end='')
+  for ind in order_centroids[i, :10]:
+    cuisines_list.append(terms[ind])
+  print(cuisines_list)
+  cuisines_list = []
+
+# Grouping 'Kmeans_labels' and 'Name' feature
+Kmeans_labels_name = pd.DataFrame(df_name.groupby(['Kmeans_labels'])['Name'],columns = ['KMeans_Cluster_labels','Restaurants'])
+Kmeans_labels_name.set_index('KMeans_Cluster_labels', inplace=True)
+
+# Reataurant names with respect to each clusters
+for i in range(0,15):
+  num = str(i)
+  print('Cluster:'+ num)
+  print(Kmeans_labels_name['Restaurants'][i])
+
+df_name['Cuisines'].unique
+
+Agglomerative Clustering
+
+import inflect
+import scipy.cluster.hierarchy as shc
+from sklearn.cluster import AgglomerativeClustering
+
+# Hierarchical Clustering for 'Cuisine' feature
+plt.figure(figsize=(30,10))
+sns.set(font_scale = 1.8)
+dend = shc.dendrogram(shc.linkage(X, method='ward'))
+plt.title('Dendrograms',fontweight = 'bold')
+plt.xlabel('Cuisines')
+plt.ylabel('Euclidean Distances')
+plt.axhline(y=1.9, color='r', linestyle='--')
+plt.show()
+
+
+# To choose appropriate K value
+
+for k in range(2,20):
+  aggh = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='ward')  
+  aggh.fit(X)
+  y_hc=aggh.fit_predict(X)
+  print("For n_clusters =", k, "The average silhouette_score is :", round(silhouette_score(X, y_hc),5))
+
+# Creating an object for AgglomerativeClustering
+aggh = AgglomerativeClustering(n_clusters=15, affinity='euclidean', linkage='ward')
+
+# Fitting the model
+aggh.fit(X)
+
+# Label Prediction
+y_hc=aggh.fit_predict(X)
+
+# Labels
+print(y_hc)
+
+# Creating new feature to store labels
+df_name['Agglomerative_labels'] = aggh.labels_
+
+# Creating a DataFrame for KMeans Labels visualization
+Agglomerative_labels_count = pd.DataFrame(df_name.groupby(['Agglomerative_labels'])['Cuisines'].count()).reset_index()
+
+# Visualization of Labels with n number of observations
+labelsnobs(Agglomerative_labels_count,Agglomerative_labels_count['Agglomerative_labels'],Agglomerative_labels_count['Cuisines'],['#581845','#900C3F','C70039','#FF5733'],
+           'labels with n number of observation', 'Observations')
+
+# Grouping 'Kmeans_labels' and 'Name' feature
+Agglomerative_labels_name = pd.DataFrame(df_name.groupby(['Agglomerative_labels'])['Name'],columns = ['Agglomerative_labels','Restaurants'])
+Agglomerative_labels_name.set_index('Agglomerative_labels', inplace=True)
+
+# Reataurant names with respect to each clusters
+for i in range(0,15):
+  num = str(i)
+  print('Cluster:'+ num)
+  print(Agglomerative_labels_name['Restaurants'][i])
+
+Loading Zomato Restaurant Reviews CSV file
+
+data2 = pd.read_csv('/content/drive/MyDrive/Data/Zomato Restaurant reviews.csv')
+
+
+
+df_review=data2.copy()
+
+#Shape
+df_review.shape
+
+# Head
+df_review.head()
+
+# Info
+df_review.info()
+
+# Null values treatment
+
+# Dropping rows with Null values
+df_review = df_review.dropna(axis =0)
+
+df_review['Rating'].unique()
+
+#Drop row for Like as Rating
+a = df_review[df_review['Rating']=='Like'].index
+df_review.drop(a,inplace=True)
+
+df_review['Rating'].unique()
+
+##Go through all features one by one
+
+df_review.head()
+
+df_review.info()
+
+# Converting 'Rating' feature to Float datatype
+df_review['Rating'] = df_review['Rating'].apply(lambda x: float(x))
+
+# Summary
+df_review.describe()
+
+# Count plot for Rating
+plt.figure(figsize = (9,5))
+sns.set(font_scale = 1.2)
+sns.countplot(x='Rating',data = df_review, palette = ['#C21010','#E64848','#CFE8A9','#ABC9FF','#F6C6EA'])
+plt.title('Rating count',fontweight = 'bold')
+plt.show()
+
+Most of the customer has given 5 rating
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
